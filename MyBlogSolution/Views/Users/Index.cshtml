@@ -1,37 +1,106 @@
 ﻿@model IEnumerable<MyBlog.Core.Models.User>
 
-<h2>Пользователи</h2>
+@{
+    ViewData["Title"] = "Все пользователи";
+}
 
-<p>
-    <a asp-action="Register">Создать нового пользователя</a>
-</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users"></i> Управление пользователями</h1>
+    <div>
+        <a asp-controller="Roles" asp-action="Index" class="btn btn-outline-info mr-2">
+            <i class="fas fa-user-tag"></i> Управление ролями
+        </a>
+        <a asp-controller="Tags" asp-action="Index" class="btn btn-outline-secondary">
+            <i class="fas fa-tags"></i> Управление тегами
+        </a>
+    </div>
+</div>
 
-<table class="table">
-    <thead>
-        <tr>
-            <th>ID</th>
-            <th>Email</th>
-            <th>Имя</th>
-            <th>Фамилия</th>
-            <th>Дата регистрации</th>
-            <th>Действия</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Id</td>
-                <td>@item.Email</td>
-                <td>@item.FirstName</td>
-                <td>@item.LastName</td>
-                <td>@item.RegisteredAt.ToString("dd.MM.yyyy")</td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.Id">Детали</a> |
-                    <a asp-action="Edit" asp-route-id="@item.Id">Редактировать</a> |
-                    <a asp-action="Delete" asp-route-id="@item.Id">Удалить</a>
-                </td>
-            </tr>
+<div class="row">
+    @foreach (var user in Model)
+    {
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card user-card h-100">
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                             style="width: 80px; height: 80px;">
+                            <i class="fas fa-user fa-2x text-secondary"></i>
+                        </div>
+                    </div>
+
+                    <h5 class="card-title text-center">
+                        @(user.FirstName ?? "Имя") @(user.LastName ?? "Не указано")
+                    </h5>
+                    <p class="card-text text-center text-muted mb-3">@user.Email</p>
+
+                    <div class="user-roles mb-3 text-center">
+                        @foreach (var role in user.Roles.Take(3))
+                        {
+                            <span class="badge
+                                        @(role.Name == "Admin" ? "badge-danger" :
+                                                                    role.Name == "Moderator" ? "badge-warning" : "badge-primary")">
+                        @role.Name
+                    </span>
+                                        }
+                        @if (user.Roles.Count > 3)
+                        {
+                            <span class="badge badge-secondary">+@(user.Roles.Count - 3)</span>
+                        }
+                    </div>
+
+                    <div class="user-stats text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-newspaper"></i> @user.Articles.Count статей •
+                            <i class="fas fa-comments"></i> @user.Comments.Count комментариев
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group w-100">
+                        <a asp-action="Details" asp-route-id="@user.Id" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@user.Id" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a asp-action="ManageRoles" asp-route-id="@user.Id" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-user-tag"></i>
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@user.Id" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4><i class="fas fa-info-circle"></i> Пользователи не найдены</h4>
+        <p>В системе пока нет зарегистрированных пользователей.</p>
+    </div>
+}
+
+<style>
+    .user-card {
+        transition: transform 0.2s;
+    }
+
+        .user-card:hover {
+            transform: translateY(-2px);
         }
-    </tbody>
-</table>
+
+    .user-roles .badge {
+        margin: 2px;
+        font-size: 0.75rem;
+    }
+
+    .user-stats {
+        border-top: 1px solid #e9ecef;
+        padding-top: 10px;
+    }
+</style>

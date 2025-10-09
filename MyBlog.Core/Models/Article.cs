@@ -14,17 +14,21 @@ namespace MyBlog.Core.Models
 
         [Required(ErrorMessage = "Заголовок обязателен")]
         [StringLength(200, ErrorMessage = "Заголовок не должен превышать 200 символов")]
-        public string Title { get; set; }
+        public string Title { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Краткое содержание обязательно")]
+        [StringLength(500, ErrorMessage = "Краткое содержание не должно превышать 500 символов")]
+        public string Summary { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Содержание обязательно")]
-        public string Content { get; set; }
+        public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedAt { get; set; }
 
         // Внешний ключ на автора (User)
         public int AuthorId { get; set; }
         // Навигационное свойство на автора
-        public virtual User Author { get; set; }
+        public virtual User Author { get; set; } = null!;
 
         // Связь многие-ко-многим с тегами
         public virtual ICollection<Tag> Tags { get; set; } = new List<Tag>();

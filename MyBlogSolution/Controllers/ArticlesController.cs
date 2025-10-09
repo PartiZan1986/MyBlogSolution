@@ -2,9 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
-using MyBlog.Services;
 using MyBlog.Web.Attributes;
-
+using System.Security.Claims;
 
 namespace MyBlog.Web.Controllers
 {
@@ -12,11 +11,13 @@ namespace MyBlog.Web.Controllers
     {
         private readonly IArticleService _articleService;
         private readonly IUserService _userService;
+        private readonly ITagService _tagService;
 
-        public ArticlesController(IArticleService articleService, IUserService userService)
+        public ArticlesController(IArticleService articleService, IUserService userService, ITagService tagService)
         {
             _articleService = articleService;
             _userService = userService;
+            _tagService = tagService;
         }
 
         // GET: Articles
@@ -44,8 +45,10 @@ namespace MyBlog.Web.Controllers
 
         // GET: Articles/Create
         [Authorize]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            var allTags = await _tagService.GetAllTagsAsync();
+            ViewBag.AllTags = allTags;
             return View();
         }
 
@@ -53,21 +56,22 @@ namespace MyBlog.Web.Controllers
         [HttpPost]
         [Authorize]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(string title, string content, string tags)
+        public async Task<IActionResult> Create(string title, string summary, string content, string tags)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    // Временное решение - позже добавим аутентификацию
-                    var authorId = 1; // Заглушка - первый пользователь
+                    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
 
+                    // Преобразуем строку тегов в List<string>
                     var tagList = tags?.Split(',', StringSplitOptions.RemoveEmptyEntries)
                                       .Select(t => t.Trim())
                                       .Where(t => !string.IsNullOrWhiteSpace(t))
                                       .ToList() ?? new List<string>();
 
-                    await _articleService.CreateArticleAsync(title, content, authorId, tagList);
+                    await _articleService.CreateArticleAsync(title, summary, content, userId, tagList);
+                    TempData["Success"] = "Статья успешно создана!";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
@@ -75,6 +79,10 @@ namespace MyBlog.Web.Controllers
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
+
+            // Если есть ошибки, возвращаем представление с данными и списком тегов
+            var allTags = await _tagService.GetAllTagsAsync();
+            ViewBag.AllTags = allTags;
             return View();
         }
 
@@ -86,6 +94,8 @@ namespace MyBlog.Web.Controllers
             try
             {
                 var article = await _articleService.GetArticleByIdAsync(id);
+                var allTags = await _tagService.GetAllTagsAsync();
+                ViewBag.AllTags = allTags;
                 return View(article);
             }
             catch (KeyNotFoundException)
@@ -109,6 +119,7 @@ namespace MyBlog.Web.Controllers
                 try
                 {
                     await _articleService.UpdateArticleAsync(article);
+                    TempData["Success"] = "Статья успешно обновлена!"; // Добавил TempData
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
@@ -116,6 +127,10 @@ namespace MyBlog.Web.Controllers
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
+
+            // Если есть ошибки, загружаем теги снова
+            var allTags = await _tagService.GetAllTagsAsync();
+            ViewBag.AllTags = allTags;
             return View(article);
         }
 
@@ -145,6 +160,7 @@ namespace MyBlog.Web.Controllers
             try
             {
                 await _articleService.DeleteArticleAsync(id);
+                TempData["Success"] = "Статья успешно удалена!"; // Добавил TempData
                 return RedirectToAction(nameof(Index));
             }
             catch (KeyNotFoundException)

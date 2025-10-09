@@ -14,21 +14,21 @@ namespace MyBlog.Core.Models
 
         [Required(ErrorMessage = "Email обязателен")]
         [EmailAddress(ErrorMessage = "Некорректный формат email")]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
+
 
         [Required(ErrorMessage = "Пароль обязателен")]
-        public string PasswordHash { get; set; } // Пароль должен храниться в хэшированном виде!
+        public string PasswordHash { get; set; } = string.Empty;
 
         [StringLength(50, ErrorMessage = "Имя не должно превышать 50 символов")]
-        public string FirstName { get; set; }
+        public string? FirstName { get; set; }
 
         [StringLength(50, ErrorMessage = "Фамилия не должна превышать 50 символов")]
-        public string LastName { get; set; }
-                
-        public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
+        public string? LastName { get; set; }
         public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
         // Навигационные свойства (связи)
+        public virtual ICollection<Role> Roles { get; set; } = new List<Role>();
         public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
         public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
     }

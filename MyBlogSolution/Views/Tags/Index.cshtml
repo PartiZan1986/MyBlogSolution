@@ -1,0 +1,52 @@
+﻿@model IEnumerable<MyBlog.Core.Models.Tag>
+
+@{
+    ViewData["Title"] = "Управление тегами";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-tags"></i> Управление тегами</h1>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Добавить тег
+    </a>
+</div>
+
+<div class="row">
+    @foreach (var tag in Model)
+    {
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body text-center">
+                    <span class="badge badge-primary badge-lg mb-3" style="font-size: 1.1rem;">
+                        #@tag.Name
+                    </span>
+                    <p class="text-muted mb-2">
+                        <i class="fas fa-newspaper"></i> @tag.Articles.Count статей
+                    </p>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group w-100">
+                        <a asp-action="Details" asp-route-id="@tag.Id" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a asp-action="Edit" asp-route-id="@tag.Id" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a asp-action="Delete" asp-route-id="@tag.Id" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4><i class="fas fa-info-circle"></i> Теги не найдены</h4>
+        <p>Создайте первый тег для статей!</p>
+        <a asp-action="Create" class="btn btn-primary">Создать тег</a>
+    </div>
+}

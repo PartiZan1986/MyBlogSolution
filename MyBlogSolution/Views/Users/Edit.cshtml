@@ -1,0 +1,79 @@
+﻿@model MyBlog.Core.Models.User
+
+@{
+    ViewData["Title"] = "Редактирование пользователя";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Редактирование пользователя</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="form-group">
+                        <label asp-for="Email" class="font-weight-bold"></label>
+                        <input asp-for="Email" class="form-control" readonly />
+                        <small class="form-text text-muted">Email нельзя изменить</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="FirstName" class="font-weight-bold"></label>
+                        <input asp-for="FirstName" class="form-control" />
+                        <span asp-validation-for="FirstName" class="text-danger"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="LastName" class="font-weight-bold"></label>
+                        <input asp-for="LastName" class="form-control" />
+                        <span asp-validation-for="LastName" class="text-danger"></span>
+                    </div>
+
+                    <!-- Информация о пользователе -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6><i class="fas fa-info-circle"></i> Информация о пользователе</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Дата регистрации:</small><br>
+                                    <strong>@Model.RegisteredAt.ToString("dd.MM.yyyy HH:mm")</strong>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">Статистика:</small><br>
+                                    <strong>@Model.Articles.Count статей, @Model.Comments.Count комментариев</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                        <a asp-action="ManageRoles" asp-route-id="@Model.Id" class="btn btn-info">
+                            <i class="fas fa-user-tag"></i> Управление ролями
+                        </a>
+                    </div>
+                </form>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mt-3">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Ошибки:</h5>
+                        @Html.ValidationSummary()
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

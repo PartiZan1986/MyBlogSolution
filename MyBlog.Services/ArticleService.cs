@@ -21,7 +21,7 @@ namespace MyBlog.Services
             _userRepository = userRepository;
         }
 
-        public async Task<Article> CreateArticleAsync(string title, string content, int authorId, List<string> tagNames)
+        public async Task<Article> CreateArticleAsync(string title, string content, string summary, int authorId, List<string> tagNames)
         {
             var author = await _userRepository.GetByIdAsync(authorId);
             if (author == null)
@@ -30,6 +30,7 @@ namespace MyBlog.Services
             var article = new Article
             {
                 Title = title,
+                Summary = summary,
                 Content = content,
                 AuthorId = authorId,
                 CreatedAt = DateTime.UtcNow

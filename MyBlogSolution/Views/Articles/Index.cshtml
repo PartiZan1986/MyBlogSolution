@@ -1,39 +1,237 @@
 ﻿@model IEnumerable<MyBlog.Core.Models.Article>
 
 @{
-    ViewData["Title"] = "Статьи";
+    ViewData["Title"] = "Все статьи";
+    var canEdit = User.IsInRole("Admin") || User.IsInRole("Moderator");
 }
 
-<h2>Статьи</h2>
-
-<p>
-    <a asp-action="Create" class="btn btn-primary">Создать новую статью</a>
-</p>
-
-<div class="articles-list">
-    @foreach (var article in Model)
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-newspaper"></i> Все статьи</h1>
+    @if (User.Identity.IsAuthenticated)
     {
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">@article.Title</h5>
-                <p class="card-text">@article.Content.Substring(0, Math.Min(article.Content.Length, 200))...</p>
-                <p class="text-muted">
-                    Автор: @article.Author?.FirstName @article.Author?.LastName |
-                    Дата: @article.CreatedAt.ToString("dd.MM.yyyy") |
-                    Комментарии: @article.Comments.Count
-                </p>
-                <div>
-                    @foreach (var tag in article.Tags)
-                    {
-                        <span class="badge bg-secondary">@tag.Name</span>
-                    }
-                </div>
-                <div class="mt-2">
-                    <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-info btn-sm">Читать</a>
-                    <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-warning btn-sm">Редактировать</a>
-                    <a asp-action="Delete" asp-route-id="@article.Id" class="btn btn-danger btn-sm">Удалить</a>
-                </div>
-            </div>
-        </div>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Новая статья
+        </a>
     }
 </div>
+
+<!-- Фильтры и поиск -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Поиск по статьям...">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" id="sortSelect">
+                    <option value="newest">Сначала новые</option>
+                    <option value="oldest">Сначала старые</option>
+                    <option value="popular">По популярности</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-control" id="tagFilter">
+                    <option value="">Все теги</option>
+                    @foreach (var tag in Model.SelectMany(a => a.Tags).Distinct().Take(10))
+                    {
+                        <option value="@tag.Name">#@tag.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-info text-center">
+        <h4><i class="fas fa-info-circle"></i> Статьи не найдены</h4>
+        <p>Будьте первым, кто опубликует статью!</p>
+        @if (User.Identity.IsAuthenticated)
+        {
+            <a asp-action="Create" class="btn btn-primary">Создать первую статью</a>
+        }
+        else
+        {
+            <a asp-controller="Auth" asp-action="Login" class="btn btn-primary">Войти для создания статей</a>
+        }
+    </div>
+}
+else
+{
+    <div class="row" id="articlesContainer">
+        @foreach (var article in Model.OrderByDescending(a => a.CreatedAt))
+        {
+            <div class="col-lg-6 mb-4 article-item"
+                 data-title="@article.Title.ToLower()"
+                 data-content="@article.Content.ToLower()"
+                 data-tags="@string.Join(" ", article.Tags.Select(t => t.Name.ToLower()))">
+                <div class="card article-card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title">@article.Title</h5>
+                            @if (canEdit)
+                            {
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                            type="button" data-toggle="dropdown">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-right">
+                                        <a class="dropdown-item" asp-action="Edit" asp-route-id="@article.Id">
+                                            <i class="fas fa-edit"></i> Редактировать
+                                        </a>
+                                        <a class="dropdown-item" asp-action="Delete" asp-route-id="@article.Id">
+                                            <i class="fas fa-trash"></i> Удалить
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <p class="card-text text-muted summary-text">
+                            @(article.Summary.Length > 150 ? article.Summary.Substring(0, 150) + "..." : article.Summary)
+                        </p>
+
+                        <div class="mb-3">
+                            @foreach (var tag in article.Tags.Take(5))
+                            {
+                                <span class="badge tag-badge" data-tag="@tag.Name">#@tag.Name</span>
+                            }
+                            @if (article.Tags.Count > 5)
+                            {
+                                <span class="badge tag-badge">+@(article.Tags.Count - 5)</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="author-info">
+                                <small class="text-muted">
+                                    <i class="fas fa-user"></i>
+                                    @(article.Author?.FirstName ?? "Пользователь") @(article.Author?.LastName ?? "")
+                                </small>
+                                <br>
+                                <small class="text-muted">
+                                    <i class="far fa-clock"></i> @article.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                                </small>
+                            </div>
+                            <div class="article-stats text-right">
+                                <small class="text-muted d-block">
+                                    <i class="far fa-comments"></i> @article.Comments.Count
+                                </small>
+                                <small class="text-muted">
+                                    <i class="far fa-eye"></i> 0
+                                </small>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-outline-primary btn-sm btn-block">
+                                <i class="fas fa-book-reader"></i> Читать полностью
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Поиск и фильтрация
+        document.getElementById('searchButton').addEventListener('click', filterArticles);
+        document.getElementById('searchInput').addEventListener('input', filterArticles);
+        document.getElementById('sortSelect').addEventListener('change', sortArticles);
+        document.getElementById('tagFilter').addEventListener('change', filterArticles);
+
+        function filterArticles() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const selectedTag = document.getElementById('tagFilter').value.toLowerCase();
+
+            document.querySelectorAll('.article-item').forEach(item => {
+                const title = item.getAttribute('data-title');
+                const content = item.getAttribute('data-content');
+                const tags = item.getAttribute('data-tags');
+
+                const matchesSearch = !searchText ||
+                    title.includes(searchText) ||
+                    content.includes(searchText);
+
+                const matchesTag = !selectedTag ||
+                    tags.includes(selectedTag);
+
+                if (matchesSearch && matchesTag) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+
+        function sortArticles() {
+            const sortBy = document.getElementById('sortSelect').value;
+            const container = document.getElementById('articlesContainer');
+            const articles = Array.from(container.querySelectorAll('.article-item'));
+
+            articles.sort((a, b) => {
+                switch (sortBy) {
+                    case 'oldest':
+                        return new Date(a.getAttribute('data-created')) - new Date(b.getAttribute('data-created'));
+                    case 'popular':
+                        return parseInt(b.getAttribute('data-views')) - parseInt(a.getAttribute('data-views'));
+                    default: // newest
+                        return new Date(b.getAttribute('data-created')) - new Date(a.getAttribute('data-created'));
+                }
+            });
+
+            // Переставляем статьи
+            articles.forEach(article => container.appendChild(article));
+        }
+    </script>
+
+    <style>
+        .summary-text {
+            line-height: 1.5;
+            min-height: 4.5em;
+        }
+
+        .tag-badge {
+            background-color: #e9ecef;
+            color: #495057;
+            margin-right: 0.3rem;
+            margin-bottom: 0.3rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+            .tag-badge:hover {
+                background-color: #007bff;
+                color: white;
+            }
+
+        .author-info {
+            flex: 1;
+        }
+
+        .article-stats {
+            min-width: 80px;
+        }
+
+        .article-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .article-card:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            }
+    </style>
+}

@@ -1,11 +1,9 @@
 ﻿using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
-using MyBlog.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using MyBlog.Infrastructure.Data;
 
@@ -22,7 +20,7 @@ namespace MyBlog.Services
             _context = context;
         }
 
-        public async Task<User> RegisterAsync(string email, string password, string firstName, string lastName)
+        public async Task<User> RegisterAsync(string email, string password, string? firstName, string? lastName)
         {
             if (await _userRepository.UserExistsAsync(email))
                 throw new InvalidOperationException("Пользователь с таким email уже существует");
@@ -55,6 +53,11 @@ namespace MyBlog.Services
         {
             return await _context.Users
                 .Include(u => u.Roles)
+                .Include(u => u.Articles)
+                .ThenInclude(a => a.Tags)
+                .Include(u => u.Articles)
+                .ThenInclude(a => a.Comments)
+                .Include(u => u.Comments)
                 .FirstOrDefaultAsync(u => u.Id == id);
         }
 
@@ -103,7 +106,7 @@ namespace MyBlog.Services
             if (user == null)
                 throw new KeyNotFoundException("Пользователь не найден");
 
-            await _userRepository.DeleteAsync(user.Id);
+            await _userRepository.DeleteAsync(id);
         }
 
         public async Task<bool> ValidateUserAsync(string email, string password)

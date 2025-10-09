@@ -1,0 +1,49 @@
+﻿@{
+    ViewData["Title"] = "Доступ запрещен";
+    Layout = "_Layout"; // Используем основной layout
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8 text-center">
+        <div class="card">
+            <div class="card-body py-5">
+                <!-- Иконка -->
+                <div class="mb-4">
+                    <i class="fas fa-ban fa-5x text-danger"></i>
+                </div>
+
+                <!-- Заголовок -->
+                <h1 class="display-4 text-danger mb-3">Доступ запрещен</h1>
+
+                <!-- Сообщение -->
+                <p class="lead mb-4">
+                    У вас недостаточно прав для просмотра этой страницы.
+                </p>
+
+                <!-- Дополнительная информация -->
+                <div class="alert alert-info mb-4">
+                    <h5><i class="fas fa-info-circle"></i> Что делать?</h5>
+                    <p class="mb-0">
+                        Если вы считаете, что это ошибка, обратитесь к администратору системы.
+                    </p>
+                </div>
+
+                <!-- Кнопки действий -->
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Вернуться назад
+                    </a>
+                    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">
+                        <i class="fas fa-home"></i> На главную
+                    </a>
+                    @if (!User.Identity.IsAuthenticated)
+                    {
+                        <a asp-controller="Auth" asp-action="Login" class="btn btn-success">
+                            <i class="fas fa-sign-in-alt"></i> Войти в систему
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

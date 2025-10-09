@@ -65,6 +65,49 @@ namespace MyBlog.Services
             }
         }
 
+        public async Task UpdateRoleAsync(Role role)
+        {
+            var existingRole = await _roleRepository.GetByIdAsync(role.Id);
+            if (existingRole == null)
+                throw new KeyNotFoundException("Роль не найдена");
+
+            // Проверяем, не пытаются ли изменить стандартные роли
+            if (IsStandardRole(existingRole.Name) && existingRole.Name != role.Name)
+                throw new InvalidOperationException("Нельзя изменять название стандартной роли");
+
+            existingRole.Name = role.Name;
+            existingRole.Description = role.Description;
+
+            await _roleRepository.UpdateAsync(existingRole);
+        }
+
+        public async Task DeleteRoleAsync(int id)
+        {
+            var role = await _roleRepository.GetByIdAsync(id);
+            if (role == null)
+                throw new KeyNotFoundException("Роль не найдена");
+
+            // Проверяем, не пытаются ли удалить стандартную роль
+            if (IsStandardRole(role.Name))
+                throw new InvalidOperationException("Нельзя удалять стандартные роли");
+
+            // Проверяем, нет ли пользователей с этой ролью
+            var usersWithRole = await _context.Users
+                .Where(u => u.Roles.Any(r => r.Id == id))
+                .CountAsync();
+
+            if (usersWithRole > 0)
+                throw new InvalidOperationException("Нельзя удалить роль, так как есть пользователи с этой ролью");
+
+            await _roleRepository.DeleteAsync(id);
+        }
+
+        private bool IsStandardRole(string roleName)
+        {
+            var standardRoles = new[] { "Admin", "Moderator", "User" };
+            return standardRoles.Contains(roleName);
+        }
+
         public async Task RemoveRoleFromUserAsync(int userId, int roleId)
         {
             var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == userId);

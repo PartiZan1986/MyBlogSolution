@@ -1,42 +1,54 @@
 ﻿@model MyBlog.Core.Models.Article
 @{
-    ViewData["Title"] = "Создание статьи";
+    ViewData["Title"] = "Редактирование статьи";
     var allTags = ViewBag.AllTags as IEnumerable<MyBlog.Core.Models.Tag> ?? new List<MyBlog.Core.Models.Tag>();
 }
 
 <div class="row justify-content-center">
     <div class="col-md-10">
         <div class="card">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="fas fa-plus"></i> Создание новой статьи</h4>
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Редактирование статьи</h4>
             </div>
             <div class="card-body">
-                <form asp-action="Create" method="post" id="articleForm">
+                <form asp-action="Edit" method="post" id="articleForm">
+                    <input type="hidden" asp-for="Id" />
+                    <input type="hidden" asp-for="AuthorId" />
+                    <input type="hidden" asp-for="CreatedAt" />
+
                     <div class="form-group">
-                        <label for="title" class="font-weight-bold">Заголовок:</label>
-                        <input type="text" id="title" name="title" class="form-control"
-                               placeholder="Введите заголовок статьи" required maxlength="200" />
-                        <small class="form-text text-muted">Максимум 200 символов</small>
+                        <label asp-for="Title" class="font-weight-bold"></label>
+                        <input asp-for="Title" class="form-control" placeholder="Введите заголовок статьи" />
+                        <span asp-validation-for="Title" class="text-danger"></span>
                     </div>
 
                     <div class="form-group">
-                        <label for="summary" class="font-weight-bold">Краткое содержание:</label>
-                        <textarea id="summary" name="summary" class="form-control"
-                                  rows="3" placeholder="Введите краткое описание статьи"
-                                  required maxlength="500"></textarea>
-                        <small class="form-text text-muted">Максимум 500 символов</small>
+                        <label asp-for="Summary" class="font-weight-bold"></label>
+                        <textarea asp-for="Summary" class="form-control" rows="3"
+                                  placeholder="Введите краткое описание статьи"></textarea>
+                        <span asp-validation-for="Summary" class="text-danger"></span>
                     </div>
 
                     <div class="form-group">
-                        <label for="content" class="font-weight-bold">Содержание:</label>
-                        <textarea id="content" name="content" class="form-control"
-                                  rows="10" placeholder="Введите содержание статьи" required></textarea>
+                        <label asp-for="Content" class="font-weight-bold"></label>
+                        <textarea asp-for="Content" class="form-control" rows="10"
+                                  placeholder="Введите содержание статьи"></textarea>
+                        <span asp-validation-for="Content" class="text-danger"></span>
                     </div>
 
+                    <!-- Теги -->
                     <div class="form-group">
                         <label class="font-weight-bold">Теги:</label>
                         <div class="selected-tags mb-2">
-                            <div id="selectedTags" class="d-flex flex-wrap gap-2"></div>
+                            <div id="selectedTags" class="d-flex flex-wrap gap-2">
+                                @foreach (var tag in Model.Tags)
+                                {
+                                    <span class="badge badge-primary">
+                                        #@tag.Name <i class="fas fa-times ml-1" style="cursor: pointer;"
+                                                      onclick="removeTag('@tag.Name')"></i>
+                                    </span>
+                                }
+                            </div>
                         </div>
                         <div class="input-group">
                             <input type="text" id="tagInput" class="form-control"
@@ -63,15 +75,39 @@
                         </div>
 
                         <!-- Скрытое поле для хранения выбранных тегов -->
-                        <input type="hidden" id="tags" name="tags" />
+                        <input type="hidden" id="tags" name="tags" value="@string.Join(",", Model.Tags.Select(t => t.Name))" />
+                    </div>
+
+                    <!-- Информация о статье -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body">
+                            <h6><i class="fas fa-info-circle"></i> Информация о статье</h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">Автор:</small><br>
+                                    <strong>@Model.Author?.FirstName @Model.Author?.LastName</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Создана:</small><br>
+                                    <strong>@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</strong>
+                                </div>
+                                <div class="col-md-3">
+                                    <small class="text-muted">Комментарии:</small><br>
+                                    <strong>@Model.Comments.Count</strong>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-save"></i> Опубликовать статью
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="fas fa-save"></i> Сохранить изменения
                         </button>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-outline-info">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
                         <a asp-action="Index" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left"></i> Отмена
+                            <i class="fas fa-arrow-left"></i> Назад к списку
                         </a>
                     </div>
                 </form>
@@ -89,8 +125,16 @@
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
     <script>
-        let selectedTags = [];
+        let selectedTags = @Html.Raw(Json.Serialize(Model.Tags.Select(t => t.Name).ToList()));
+
+        // Инициализация выбранных тегов
+        function initializeSelectedTags() {
+            updateSelectedTags();
+            updateHiddenField();
+        }
 
         // Добавление тега по кнопке
         document.getElementById('addTag').addEventListener('click', function() {
@@ -154,7 +198,12 @@
             document.getElementById('tags').value = selectedTags.join(',');
         }
 
-        // Инициализация формы
+        // Инициализация при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSelectedTags();
+        });
+
+        // Валидация формы
         document.getElementById('articleForm').addEventListener('submit', function(e) {
             if (selectedTags.length === 0) {
                 e.preventDefault();

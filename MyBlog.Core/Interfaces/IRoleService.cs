@@ -13,6 +13,8 @@ namespace MyBlog.Core.Interfaces
         Task<Role> GetRoleByIdAsync(int id);
         Task<Role> GetRoleByNameAsync(string name);
         Task<IEnumerable<Role>> GetAllRolesAsync();
+        Task UpdateRoleAsync(Role role);
+        Task DeleteRoleAsync(int id);
         Task AssignRoleToUserAsync(int userId, int roleId);
         Task RemoveRoleFromUserAsync(int userId, int roleId);
         Task<bool> UserHasRoleAsync(int userId, string roleName);

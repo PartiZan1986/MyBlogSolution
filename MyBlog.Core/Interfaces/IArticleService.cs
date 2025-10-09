@@ -9,7 +9,7 @@ namespace MyBlog.Core.Interfaces
 {
     public interface IArticleService
     {
-        Task<Article> CreateArticleAsync(string title, string content, int authorId, List<string> tags);
+        Task<Article> CreateArticleAsync(string title, string summary, string content, int authorId, List<string> tags);
         Task<Article> GetArticleByIdAsync(int id);
         Task<IEnumerable<Article>> GetAllArticlesAsync();
         Task<IEnumerable<Article>> GetArticlesByAuthorIdAsync(int authorId);

@@ -1,0 +1,72 @@
+﻿@model MyBlog.Web.ViewModels.EditProfileViewModel
+
+@{
+    ViewData["Title"] = "Редактирование профиля";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Редактирование профиля</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="EditProfile" method="post">
+                    <div class="form-group">
+                        <label asp-for="FirstName" class="font-weight-bold"></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            </div>
+                            <input asp-for="FirstName" class="form-control" placeholder="Введите ваше имя" />
+                        </div>
+                        <span asp-validation-for="FirstName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="LastName" class="font-weight-bold"></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            </div>
+                            <input asp-for="LastName" class="form-control" placeholder="Введите вашу фамилию" />
+                        </div>
+                        <span asp-validation-for="LastName" class="text-danger small"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label asp-for="Email" class="font-weight-bold"></label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            </div>
+                            <input asp-for="Email" class="form-control" readonly />
+                        </div>
+                        <small class="form-text text-muted">Email нельзя изменить</small>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                        <a asp-action="Profile" class="btn btn-outline-secondary btn-block">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                    </div>
+                </form>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mt-3">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Ошибки:</h5>
+                        @Html.ValidationSummary()
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,194 @@
+﻿@model MyBlog.Core.Models.Article
+
+@{
+    ViewData["Title"] = Model.Title;
+    var canEdit = User.IsInRole("Admin") || User.IsInRole("Moderator") ||
+                 (User.Identity.IsAuthenticated && User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == Model.AuthorId.ToString());
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Хлебные крошки -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-action="Index">Статьи</a></li>
+                <li class="breadcrumb-item active">@Model.Title</li>
+            </ol>
+        </nav>
+
+        <!-- Статья -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <!-- Заголовок и действия -->
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h1 class="card-title">@Model.Title</h1>
+                    @if (canEdit)
+                    {
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Id">
+                                    <i class="fas fa-edit"></i> Редактировать
+                                </a>
+                                <a class="dropdown-item" asp-action="Delete" asp-route-id="@Model.Id">
+                                    <i class="fas fa-trash"></i> Удалить
+                                </a>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Мета-информация -->
+                <div class="article-meta mb-4">
+                    <div class="d-flex flex-wrap align-items-center text-muted">
+                        <div class="mr-3">
+                            <i class="fas fa-user"></i>
+                            @(Model.Author?.FirstName ?? "Пользователь") @(Model.Author?.LastName ?? "")
+                        </div>
+                        <div class="mr-3">
+                            <i class="far fa-clock"></i> @Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")
+                        </div>
+                        @if (Model.UpdatedAt.HasValue)
+                        {
+                            <div class="mr-3">
+                                <i class="fas fa-edit"></i> Обновлено: @Model.UpdatedAt.Value.ToString("dd.MM.yyyy HH:mm")
+                            </div>
+                        }
+                        <div class="mr-3">
+                            <i class="far fa-comments"></i> @Model.Comments.Count комментариев
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Теги -->
+                @if (Model.Tags.Any())
+                {
+                    <div class="article-tags mb-4">
+                        @foreach (var tag in Model.Tags)
+                        {
+                            <a href="#" class="badge badge-primary">#@tag.Name</a>
+                        }
+                    </div>
+                }
+
+                <!-- Краткое содержание -->
+                <div class="alert alert-info">
+                    <h5><i class="fas fa-info-circle"></i> Краткое содержание</h5>
+                    <p class="mb-0">@Model.Summary</p>
+                </div>
+
+                <!-- Содержание -->
+                <div class="article-content">
+                    @Html.Raw(Model.Content.Replace("\n", "<br>"))
+                </div>
+            </div>
+        </div>
+
+        <!-- Комментарии -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="far fa-comments"></i> Комментарии (@Model.Comments.Count)
+                </h5>
+            </div>
+            <div class="card-body">
+                @if (User.Identity.IsAuthenticated)
+                {
+                    <!-- Форма добавления комментария -->
+                    <form asp-controller="Comments" asp-action="Create" method="post" class="mb-4">
+                        <input type="hidden" name="articleId" value="@Model.Id" />
+                        <div class="form-group">
+                            <label for="commentText" class="font-weight-bold">Добавить комментарий:</label>
+                            <textarea id="commentText" name="text" class="form-control" rows="3"
+                                  placeholder="Введите ваш комментарий..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Отправить комментарий
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <div class="alert alert-warning text-center">
+                        <p>Для добавления комментария необходимо <a asp-controller="Auth" asp-action="Login">войти</a> в систему.</p>
+                    </div>
+                }
+
+                <!-- Список комментариев -->
+                <div class="comments-list">
+                    @if (Model.Comments.Any())
+                    {
+                        foreach (var comment in Model.Comments.OrderByDescending(c => c.CreatedAt))
+                        {
+                            <div class="media mb-4">
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center mr-3"
+                                     style="width: 50px; height: 50px;">
+                                    <i class="fas fa-user text-secondary"></i>
+                                </div>
+                                <div class="media-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mt-0 mb-0">
+                                            @(comment.Author?.FirstName ?? "Пользователь") @(comment.Author?.LastName ?? "")
+                                        </h6>
+                                        <small class="text-muted">@comment.CreatedAt.ToString("dd.MM.yyyy HH:mm")</small>
+                                    </div>
+                                    <p class="mb-2">@comment.Text</p>
+                                    @if (User.IsInRole("Admin") || User.IsInRole("Moderator") ||
+                                                                (User.Identity.IsAuthenticated && User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == comment.AuthorId.ToString()))
+                                    {
+                                        <div class="comment-actions">
+                                            <a asp-controller="Comments" asp-action="Edit" asp-route-id="@comment.Id"
+                                               class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a asp-controller="Comments" asp-action="Delete" asp-route-id="@comment.Id"
+                                               class="btn btn-sm btn-outline-danger">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center">Пока нет комментариев. Будьте первым!</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .article-content {
+        line-height: 1.8;
+        font-size: 1.1rem;
+    }
+
+        .article-content p {
+            margin-bottom: 1.5rem;
+        }
+
+    .article-meta {
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 1rem;
+    }
+
+    .article-tags .badge {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .comment-actions {
+        margin-top: 0.5rem;
+    }
+
+        .comment-actions .btn {
+            margin-right: 0.25rem;
+        }
+</style>

@@ -1,0 +1,223 @@
+﻿@model MyBlog.Core.Models.User
+
+@{
+    ViewData["Title"] = "Профиль пользователя";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="fas fa-user-circle"></i> Профиль пользователя</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Основная информация -->
+                    <div class="col-md-4 text-center">
+                        <div class="mb-4">
+                            <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 120px; height: 120px;">
+                                <i class="fas fa-user fa-3x text-secondary"></i>
+                            </div>
+                        </div>
+                        <h4>@(Model.FirstName ?? "Имя") @(Model.LastName ?? "Не указано")</h4>
+                        <p class="text-muted">@Model.Email</p>
+
+                        <!-- Роли -->
+                        <div class="mb-4">
+                            @foreach (var role in Model.Roles)
+                            {
+                                <span class="badge
+                                        @(role.Name == "Admin" ? "badge-danger" :
+                                                                            role.Name == "Moderator" ? "badge-warning" : "badge-primary") mb-1">
+                                @role.Name
+                            </span>
+                                                        }
+                        </div>
+
+                        <!-- Статистика -->
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-number text-primary">@Model.Articles.Count</div>
+                                <div class="stat-label">Статей</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-number text-success">@Model.Comments.Count</div>
+                                <div class="stat-label">Комментариев</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Детальная информация -->
+                    <div class="col-md-8">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="info-card mb-4">
+                                    <h5><i class="fas fa-info-circle"></i> Основная информация</h5>
+                                    <table class="table table-borderless">
+                                        <tr>
+                                            <td><strong>ID:</strong></td>
+                                            <td>@Model.Id</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Email:</strong></td>
+                                            <td>@Model.Email</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Имя:</strong></td>
+                                            <td>@(Model.FirstName ?? "Не указано")</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Фамилия:</strong></td>
+                                            <td>@(Model.LastName ?? "Не указано")</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Дата регистрации:</strong></td>
+                                            <td>@Model.RegisteredAt.ToString("dd.MM.yyyy HH:mm")</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="info-card mb-4">
+                                    <h5><i class="fas fa-chart-pie"></i> Активность</h5>
+                                    <div class="activity-stats">
+                                        <div class="activity-item">
+                                            <i class="fas fa-newspaper text-primary"></i>
+                                            <span>Опубликовано статей: <strong>@Model.Articles.Count</strong></span>
+                                        </div>
+                                        <div class="activity-item">
+                                            <i class="fas fa-comments text-success"></i>
+                                            <span>Написано комментариев: <strong>@Model.Comments.Count</strong></span>
+                                        </div>
+                                        <div class="activity-item">
+                                            <i class="fas fa-user-tag text-info"></i>
+                                            <span>Назначено ролей: <strong>@Model.Roles.Count</strong></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Последние статьи -->
+                @if (Model.Articles.Any())
+                {
+                    <div class="mt-4">
+                        <h5><i class="fas fa-newspaper"></i> Последние статьи</h5>
+                        <div class="row">
+                            @foreach (var article in Model.Articles.OrderByDescending(a => a.CreatedAt).Take(3))
+                            {
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body">
+                                            <h6 class="card-title">@article.Title</h6>
+                                            <p class="card-text small text-muted">
+                                                @(article.Summary.Length > 100 ? article.Summary.Substring(0, 100) + "..." : article.Summary)
+                                            </p>
+                                            <div class="article-meta">
+                                                <small class="text-muted">
+                                                    <i class="far fa-clock"></i> @article.CreatedAt.ToString("dd.MM.yyyy")
+                                                </small>
+                                                <br>
+                                                <small class="text-muted">
+                                                    <i class="far fa-comments"></i> @article.Comments.Count
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="card-footer bg-transparent">
+                                            <a asp-controller="Articles" asp-action="Details" asp-route-id="@article.Id"
+                                               class="btn btn-sm btn-outline-primary btn-block">
+                                                Читать
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        @if (Model.Articles.Count > 3)
+                        {
+                            <div class="text-center mt-3">
+                                <a asp-controller="Articles" asp-action="Index" class="btn btn-outline-primary">
+                                    Показать все статьи (@Model.Articles.Count)
+                                </a>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <!-- Действия -->
+                <div class="mt-4 pt-3 border-top">
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Редактировать
+                        </a>
+                        <a asp-action="ManageRoles" asp-route-id="@Model.Id" class="btn btn-success">
+                            <i class="fas fa-user-tag"></i> Управление ролями
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .stat-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+
+    .info-card {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        height: 100%;
+    }
+
+    .activity-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px;
+        background: white;
+        border-radius: 5px;
+    }
+
+        .activity-item i {
+            margin-right: 10px;
+            width: 20px;
+            text-align: center;
+        }
+
+    .article-meta {
+        margin-top: 10px;
+    }
+</style>

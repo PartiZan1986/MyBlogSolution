@@ -2,60 +2,61 @@
 using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
 using MyBlog.Web.Attributes;
+using System.Threading.Tasks;
 
 namespace MyBlog.Web.Controllers
 {
-    [AuthorizeRoles("Admin", "Moderator")]
-    public class TagsController : Controller
+    [AuthorizeRoles("Admin")]
+    public class RolesController : Controller
     {
-        private readonly ITagService _tagService;
+        private readonly IRoleService _roleService;
 
-        public TagsController(ITagService tagService)
+        public RolesController(IRoleService roleService)
         {
-            _tagService = tagService;
+            _roleService = roleService;
         }
 
-        // GET: Tags
+        // GET: Roles
         public async Task<IActionResult> Index()
         {
-            var tags = await _tagService.GetAllTagsAsync();
-            return View(tags);
+            var roles = await _roleService.GetAllRolesAsync();
+            return View(roles);
         }
 
-        // GET: Tags/Details/5
+        // GET: Roles/Details/5
         public async Task<IActionResult> Details(int id)
         {
             try
             {
-                var tag = await _tagService.GetTagByIdAsync(id);
-                return View(tag);
+                var role = await _roleService.GetRoleByIdAsync(id);
+                return View(role);
             }
-            catch (KeyNotFoundException)
+            catch (System.Exception)
             {
                 return NotFound();
             }
         }
 
-        // GET: Tags/Create
+        // GET: Roles/Create
         public IActionResult Create()
         {
             return View();
         }
 
-        // POST: Tags/Create
+        // POST: Roles/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(string name)
+        public async Task<IActionResult> Create(string name, string description)
         {
             if (ModelState.IsValid)
             {
                 try
                 {
-                    await _tagService.CreateTagAsync(name);
-                    TempData["Success"] = "Тег успешно создан!";
+                    await _roleService.CreateRoleAsync(name, description);
+                    TempData["Success"] = "Роль успешно создана!";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch (System.Exception ex)
                 {
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
@@ -63,70 +64,70 @@ namespace MyBlog.Web.Controllers
             return View();
         }
 
-        // GET: Tags/Edit/5
+        // GET: Roles/Edit/5
         public async Task<IActionResult> Edit(int id)
         {
             try
             {
-                var tag = await _tagService.GetTagByIdAsync(id);
-                return View(tag);
+                var role = await _roleService.GetRoleByIdAsync(id);
+                return View(role);
             }
-            catch (KeyNotFoundException)
+            catch (System.Exception)
             {
                 return NotFound();
             }
         }
 
-        // POST: Tags/Edit/5
+        // POST: Roles/Edit/5
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Tag tag)
+        public async Task<IActionResult> Edit(int id, Role role)
         {
-            if (id != tag.Id)
+            if (id != role.Id)
                 return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
-                    await _tagService.UpdateTagAsync(tag);
-                    TempData["Success"] = "Тег успешно обновлен!";
+                    await _roleService.UpdateRoleAsync(role);
+                    TempData["Success"] = "Роль успешно обновлена!";
                     return RedirectToAction(nameof(Index));
                 }
-                catch (Exception ex)
+                catch (System.Exception ex)
                 {
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
-            return View(tag);
+            return View(role);
         }
 
-        // GET: Tags/Delete/5
+        // GET: Roles/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
             try
             {
-                var tag = await _tagService.GetTagByIdAsync(id);
-                return View(tag);
+                var role = await _roleService.GetRoleByIdAsync(id);
+                return View(role);
             }
-            catch (KeyNotFoundException)
+            catch (System.Exception)
             {
                 return NotFound();
             }
         }
 
-        // POST: Tags/Delete/5
+        // POST: Roles/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             try
             {
-                await _tagService.DeleteTagAsync(id);
-                TempData["Success"] = "Тег успешно удален!";
+                await _roleService.DeleteRoleAsync(id);
+                TempData["Success"] = "Роль успешно удалена!";
                 return RedirectToAction(nameof(Index));
             }
-            catch (KeyNotFoundException)
+            catch (System.Exception)
             {
                 return NotFound();
             }

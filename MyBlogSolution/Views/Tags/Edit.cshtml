@@ -1,0 +1,68 @@
+﻿@model MyBlog.Core.Models.Tag
+
+@{
+    ViewData["Title"] = "Редактирование тега";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h4 class="mb-0"><i class="fas fa-edit"></i> Редактирование тега</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <input type="hidden" asp-for="Id" />
+
+                    <div class="form-group">
+                        <label asp-for="Name" class="font-weight-bold"></label>
+                        <input asp-for="Name" class="form-control" placeholder="Введите название тега" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+
+                    <!-- Информация о теге -->
+                    <div class="card bg-light mb-3">
+                        <div class="card-body text-center">
+                            <h6><i class="fas fa-info-circle"></i> Информация о теге</h6>
+                            <div class="row">
+                                <div class="col-12">
+                                    <span class="badge badge-primary badge-lg" style="font-size: 1.2rem;">
+                                        #@Model.Name
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">
+                                        Используется в @Model.Articles.Count статьях
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save"></i> Сохранить изменения
+                        </button>
+                        <a asp-action="Index" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Назад к списку
+                        </a>
+                        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                            <i class="fas fa-eye"></i> Просмотр
+                        </a>
+                    </div>
+                </form>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mt-3">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Ошибки:</h5>
+                        @Html.ValidationSummary()
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

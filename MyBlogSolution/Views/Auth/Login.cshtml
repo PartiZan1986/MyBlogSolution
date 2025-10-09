@@ -1,27 +1,80 @@
 ﻿@{
-    ViewData["Title"] = "Вход";
+    ViewData["Title"] = "Вход в систему";
 }
 
-<h2>Вход в систему</h2>
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="fas fa-sign-in-alt"></i> Вход в систему</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Login" method="post">
+                    <div class="form-group">
+                        <label for="email" class="font-weight-bold">Email:</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                            </div>
+                            <input type="email" id="email" name="email" class="form-control"
+                                   placeholder="Введите ваш email" required />
+                        </div>
+                    </div>
 
-<form asp-action="Login" method="post">
-    <div class="form-group">
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" class="form-control" required />
+                    <div class="form-group">
+                        <label for="password" class="font-weight-bold">Пароль:</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                            </div>
+                            <input type="password" id="password" name="password" class="form-control"
+                                   placeholder="Введите ваш пароль" required />
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-block btn-lg">
+                        <i class="fas fa-sign-in-alt"></i> Войти
+                    </button>
+
+                    <div class="text-center mt-3">
+                        <p>Нет аккаунта? <a asp-action="Register" class="font-weight-bold">Зарегистрируйтесь</a></p>
+                    </div>
+                </form>
+
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-danger mt-3">
+                        <h5><i class="fas fa-exclamation-triangle"></i> Ошибки:</h5>
+                        @Html.ValidationSummary()
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Тестовые пользователи -->
+        <div class="card mt-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Тестовые пользователи</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <strong>Админ:</strong><br>
+                        admin@blog.com<br>
+                        admin123
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Модератор:</strong><br>
+                        moderator@blog.com<br>
+                        moderator123
+                    </div>
+                    <div class="col-md-4">
+                        <strong>Пользователь:</strong><br>
+                        user@blog.com<br>
+                        user123
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="form-group">
-        <label for="password">Пароль:</label>
-        <input type="password" id="password" name="password" class="form-control" required />
-    </div>
-
-    <button type="submit" class="btn btn-primary">Войти</button>
-    <a asp-action="Register" class="btn btn-secondary">Регистрация</a>
-</form>
-
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="alert alert-danger mt-3">
-        @Html.ValidationSummary()
-    </div>
-}
+</div>

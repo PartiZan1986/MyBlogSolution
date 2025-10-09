@@ -1,0 +1,142 @@
+﻿@model MyBlog.Core.Models.User
+@{
+    ViewData["Title"] = "Управление ролями пользователя";
+    var allRoles = ViewBag.AllRoles as IEnumerable<MyBlog.Core.Models.Role> ?? new List<MyBlog.Core.Models.Role>();
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="fas fa-user-tag"></i> Управление ролями пользователя</h4>
+            </div>
+            <div class="card-body">
+                <!-- Информация о пользователе -->
+                <div class="user-info mb-4 p-3 bg-light rounded">
+                    <div class="row">
+                        <div class="col-md-2 text-center">
+                            <div class="bg-secondary rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 60px; height: 60px;">
+                                <i class="fas fa-user fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <div class="col-md-10">
+                            <h5>@(Model.FirstName ?? "Имя") @(Model.LastName ?? "Не указано")</h5>
+                            <p class="mb-1 text-muted">@Model.Email</p>
+                            <p class="mb-0">
+                                <small class="text-muted">
+                                    Зарегистрирован: @Model.RegisteredAt.ToString("dd.MM.yyyy")
+                                </small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Текущие роли -->
+                <div class="current-roles mb-4">
+                    <h5><i class="fas fa-list"></i> Текущие роли пользователя</h5>
+                    @if (Model.Roles.Any())
+                    {
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var role in Model.Roles)
+                            {
+                                <div class="d-flex align-items-center bg-light rounded p-2">
+                                    <span class="badge
+                                                @(role.Name == "Admin" ? "badge-danger" :
+                                                                                    role.Name == "Moderator" ? "badge-warning" : "badge-primary") mr-2">
+                                @role.Name
+                            </span>
+                            @if (role.Name != "User") // Запрещаем удалять базовую роль
+                                    {
+                                        <form asp-action="RemoveRole" method="post" class="mb-0">
+                                            <input type="hidden" name="userId" value="@Model.Id" />
+                                            <input type="hidden" name="roleId" value="@role.Id" />
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Вы уверены, что хотите удалить роль @role.Name у пользователя?')">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">У пользователя нет назначенных ролей</p>
+                    }
+                </div>
+
+                <!-- Добавление новой роли -->
+                <div class="add-role">
+                    <h5><i class="fas fa-plus"></i> Добавить роль</h5>
+                    <form asp-action="AssignRole" method="post" class="form-inline">
+                        <input type="hidden" name="userId" value="@Model.Id" />
+                        <div class="form-group mr-2">
+                            <select name="roleId" class="form-control" required>
+                                <option value="">-- Выберите роль --</option>
+                                @foreach (var role in allRoles.Where(r => !Model.Roles.Any(ur => ur.Id == r.Id)))
+                                {
+                                    <option value="@role.Id">@role.Name - @role.Description</option>
+                                }
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Добавить роль
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Статистика -->
+                <div class="user-stats mt-4 p-3 bg-light rounded">
+                    <h6><i class="fas fa-chart-bar"></i> Статистика пользователя</h6>
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <h4 class="text-primary mb-0">@Model.Articles.Count</h4>
+                                <small class="text-muted">Статей</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <h4 class="text-success mb-0">@Model.Comments.Count</h4>
+                                <small class="text-muted">Комментариев</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="stat-item">
+                                <h4 class="text-info mb-0">@Model.Roles.Count</h4>
+                                <small class="text-muted">Ролей</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Действия -->
+                <div class="mt-4">
+                    <a asp-action="Index" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> Назад к списку
+                    </a>
+                    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-info">
+                        <i class="fas fa-eye"></i> Просмотр профиля
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-item {
+        padding: 10px;
+    }
+
+    .current-roles .badge {
+        font-size: 0.9rem;
+        padding: 0.5em 0.75em;
+    }
+
+    .user-info {
+        border-left: 4px solid #28a745;
+    }
+</style>

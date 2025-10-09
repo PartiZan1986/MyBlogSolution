@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
+using MyBlog.Web.ViewModels;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -137,7 +138,7 @@ namespace MyBlog.Web.Controllers
         [AllowAnonymous]
         public IActionResult AccessDenied()
         {
-            return View();
+            return View("AccessDenied");
         }
 
         // GET: Auth/Profile
@@ -147,6 +148,53 @@ namespace MyBlog.Web.Controllers
             var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
             var user = await _userService.GetUserWithRolesAsync(userId);
             return View(user);
+        }
+
+        // GET: Auth/EditProfile
+        [Authorize]
+        public async Task<IActionResult> EditProfile()
+        {
+            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var user = await _userService.GetUserByIdAsync(userId);
+
+            var editModel = new EditProfileViewModel
+            {
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Email = user.Email
+            };
+
+            return View(editModel);
+        }
+
+        // POST: Auth/EditProfile
+        [HttpPost]
+        [Authorize]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditProfile(EditProfileViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    var user = await _userService.GetUserByIdAsync(userId);
+
+                    user.FirstName = model.FirstName;
+                    user.LastName = model.LastName;
+
+                    await _userService.UpdateUserAsync(user);
+
+                    TempData["Success"] = "Профиль успешно обновлен!";
+                    return RedirectToAction(nameof(Profile));
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError(string.Empty, ex.Message);
+                }
+            }
+
+            return View(model);
         }
     }
 }
