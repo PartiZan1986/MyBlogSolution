@@ -7,9 +7,8 @@ using System.Threading.Tasks;
 
 namespace MyBlog.Core.Models
 {
-    public class Tag
+    public class Tag : BaseEntity
     {
-        public int Id { get; set; }
         [Required(ErrorMessage = "Название тега обязательно")]
         [StringLength(50, ErrorMessage = "Название тега не должно превышать 50 символов")]
         public string Name { get; set; } = string.Empty;

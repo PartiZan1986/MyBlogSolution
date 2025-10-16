@@ -7,14 +7,10 @@ using System.Threading.Tasks;
 
 namespace MyBlog.Core.Models
 {
-    public class Comment
+    public class Comment : BaseEntity
     {
-        public int Id { get; set; }
-
         [Required(ErrorMessage = "Текст комментария обязателен")]
         public string Text { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         // Внешний ключ на статью
         public int ArticleId { get; set; }
         // Навигационное свойство на статью

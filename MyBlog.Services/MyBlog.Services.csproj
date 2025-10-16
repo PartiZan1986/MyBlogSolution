@@ -8,6 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
+    <PackageReference Include="NLog" Version="6.0.5" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="6.0.5" />
   </ItemGroup>
 
   <ItemGroup>

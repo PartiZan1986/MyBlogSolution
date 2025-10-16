@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
+using MyBlog.Services;
 using MyBlog.Web.ViewModels;
 using System.Security.Claims;
 using System.Threading.Tasks;
@@ -14,11 +15,13 @@ namespace MyBlog.Web.Controllers
     {
         private readonly IUserService _userService;
         private readonly IRoleService _roleService;
+        private readonly ILoggerService _loggerService;
 
-        public AuthController(IUserService userService, IRoleService roleService)
+        public AuthController(IUserService userService, IRoleService roleService, ILoggerService loggerService)
         {
             _userService = userService;
             _roleService = roleService;
+            _loggerService = loggerService;
         }
 
         // GET: Auth/Login
@@ -28,11 +31,45 @@ namespace MyBlog.Web.Controllers
             return View();
         }
 
+        private async Task SignInUserAsync(User user, bool rememberMe = true)
+        {
+            var userWithRoles = await _userService.GetUserWithRolesAsync(user.Id);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim("FirstName", user.FirstName ?? ""),
+                new Claim("LastName", user.LastName ?? "")
+            };
+
+            if (userWithRoles?.Roles != null)
+            {
+                foreach (var role in userWithRoles.Roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role.Name));
+                }
+            }
+
+            var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+            var authProperties = new AuthenticationProperties
+            {
+                IsPersistent = rememberMe,
+                ExpiresUtc = DateTimeOffset.UtcNow.AddDays(rememberMe ? 7 : 1)
+            };
+
+            await HttpContext.SignInAsync(
+                CookieAuthenticationDefaults.AuthenticationScheme,
+                new ClaimsPrincipal(claimsIdentity),
+                authProperties);
+        }
+
         // POST: Auth/Login
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Login(string email, string password, string returnUrl = null)
+        public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
         {
             if (ModelState.IsValid)
             {
@@ -43,6 +80,10 @@ namespace MyBlog.Web.Controllers
                     {
                         var user = await _userService.GetUserByEmailAsync(email);
                         var userWithRoles = await _userService.GetUserWithRolesAsync(user.Id);
+
+                        await _loggerService.LogUserActionAsync("LOGIN",
+                        $"User logged in successfully. Email: {email}",
+                        user.Id, $"{user.FirstName} {user.LastName}");
 
                         // Создаем claims
                         var claims = new List<Claim>
@@ -55,10 +96,12 @@ namespace MyBlog.Web.Controllers
                         };
 
                         // Добавляем роли в claims
-                        foreach (var role in userWithRoles.Roles)
+                        if (userWithRoles?.Roles != null)
                         {
-                            claims.Add(new Claim(ClaimTypes.Role, role.Name));
-                            claims.Add(new Claim("Role", role.Name)); // Дублируем для простоты
+                            foreach (var role in userWithRoles.Roles)
+                            {
+                                claims.Add(new Claim(ClaimTypes.Role, role.Name));
+                            }
                         }
 
                         var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -82,11 +125,15 @@ namespace MyBlog.Web.Controllers
                     }
                     else
                     {
+                        await _loggerService.LogUserActionAsync("LOGIN_FAILED",
+                        $"Failed login attempt. Email: {email}");
+
                         ModelState.AddModelError(string.Empty, "Неверный email или пароль");
                     }
                 }
                 catch (Exception ex)
                 {
+                    await _loggerService.LogErrorAsync("Error during login", ex);
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
@@ -111,13 +158,17 @@ namespace MyBlog.Web.Controllers
             {
                 try
                 {
-                    await _userService.RegisterAsync(email, password, firstName, lastName);
+                    var user = await _userService.RegisterAsync(email, password, firstName, lastName);
 
-                    // Автоматический вход после регистрации
+                    await _loggerService.LogUserActionAsync("REGISTER",
+                        $"User registered successfully. Email: {email}",
+                        user.Id, $"{user.FirstName} {user.LastName}");
+
                     return await Login(email, password);
                 }
                 catch (Exception ex)
                 {
+                    await _loggerService.LogErrorAsync("Error during registration", ex);
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
@@ -130,6 +181,18 @@ namespace MyBlog.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Logout()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            int? userId = null;
+
+            if (userIdClaim != null && int.TryParse(userIdClaim.Value, out int parsedUserId))
+            {
+                userId = parsedUserId;
+            }
+
+            await _loggerService.LogUserActionAsync("LOGOUT",
+                "User logged out",
+                userId);
+
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Index", "Home");
         }
@@ -145,7 +208,13 @@ namespace MyBlog.Web.Controllers
         [Authorize]
         public async Task<IActionResult> Profile()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                await _loggerService.LogErrorAsync("Error accessing profile - user not authenticated");
+                return RedirectToAction("Login");
+            }
+
             var user = await _userService.GetUserWithRolesAsync(userId);
             return View(user);
         }
@@ -154,7 +223,13 @@ namespace MyBlog.Web.Controllers
         [Authorize]
         public async Task<IActionResult> EditProfile()
         {
-            var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                await _loggerService.LogErrorAsync("Error accessing edit profile - user not authenticated");
+                return RedirectToAction("Login");
+            }
+
             var user = await _userService.GetUserByIdAsync(userId);
 
             var editModel = new EditProfileViewModel
@@ -165,6 +240,7 @@ namespace MyBlog.Web.Controllers
             };
 
             return View(editModel);
+
         }
 
         // POST: Auth/EditProfile
@@ -177,7 +253,13 @@ namespace MyBlog.Web.Controllers
             {
                 try
                 {
-                    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    {
+                        await _loggerService.LogErrorAsync("Error editing profile - user not authenticated");
+                        return RedirectToAction("Login");
+                    }
+
                     var user = await _userService.GetUserByIdAsync(userId);
 
                     user.FirstName = model.FirstName;

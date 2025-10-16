@@ -49,7 +49,7 @@ namespace MyBlog.Services
             return user;
         }
 
-        public async Task<User> GetUserWithRolesAsync(int id)
+        public async Task<User?> GetUserWithRolesAsync(int id)
         {
             return await _context.Users
                 .Include(u => u.Roles)

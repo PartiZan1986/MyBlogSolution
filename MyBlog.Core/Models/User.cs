@@ -8,10 +8,8 @@ using System.Xml.Linq;
 
 namespace MyBlog.Core.Models
 {
-    public class User
+    public class User : BaseEntity
     {
-        public int Id { get; set; }
-
         [Required(ErrorMessage = "Email обязателен")]
         [EmailAddress(ErrorMessage = "Некорректный формат email")]
         public string Email { get; set; } = string.Empty;

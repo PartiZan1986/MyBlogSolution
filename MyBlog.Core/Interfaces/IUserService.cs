@@ -9,10 +9,10 @@ namespace MyBlog.Core.Interfaces
 {
     public interface IUserService
     {
-        Task<User> RegisterAsync(string email, string password, string firstName, string lastName);
+        Task<User> RegisterAsync(string email, string password, string? firstName, string? lastName);
         Task<User> GetUserByIdAsync(int id);
         Task<User> GetUserByEmailAsync(string email);
-        Task<User> GetUserWithRolesAsync(int id);
+        Task<User?> GetUserWithRolesAsync(int id);
         Task<IEnumerable<User>> GetAllUsersAsync();
         Task UpdateUserAsync(User user);
         Task DeleteUserAsync(int id);

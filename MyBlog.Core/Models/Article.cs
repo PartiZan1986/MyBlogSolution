@@ -8,10 +8,8 @@ using System.Xml.Linq;
 
 namespace MyBlog.Core.Models
 {
-    public class Article
+    public class Article : BaseEntity
     {
-        public int Id { get; set; }
-
         [Required(ErrorMessage = "Заголовок обязателен")]
         [StringLength(200, ErrorMessage = "Заголовок не должен превышать 200 символов")]
         public string Title { get; set; } = string.Empty;
@@ -22,9 +20,7 @@ namespace MyBlog.Core.Models
 
         [Required(ErrorMessage = "Содержание обязательно")]
         public string Content { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? UpdatedAt { get; set; }
-
+        
         // Внешний ключ на автора (User)
         public int AuthorId { get; set; }
         // Навигационное свойство на автора

@@ -1,107 +1,99 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.EntityFrameworkCore;
+using NLog;
+using NLog.Web;
 using MyBlog.Core.Interfaces;
-using MyBlog.Infrastructure;
+using MyBlog.Services;
 using MyBlog.Infrastructure.Data;
 using MyBlog.Infrastructure.Repositories;
-using MyBlog.Services;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
-
-
-
-var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-builder.Services.AddControllersWithViews();
-
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.LoginPath = "/Auth/Login";
-        options.AccessDeniedPath = "/Auth/AccessDenied";
-        options.Cookie.HttpOnly = true;
-        options.ExpireTimeSpan = TimeSpan.FromDays(7);
-    });
-
-// Authorization
-builder.Services.AddAuthorization(options =>
+try
 {
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireClaim("Role", "Admin"));
+    var builder = WebApplication.CreateBuilder(args);
 
-    options.AddPolicy("ModeratorOrAdmin", policy =>
-        policy.RequireClaim("Role", "Admin", "Moderator"));
+    // Настройка NLog
+    builder.Logging.ClearProviders();
+    builder.Host.UseNLog();
 
-    options.AddPolicy("UserOnly", policy =>
-        policy.RequireClaim("Role", "User"));
-});
+    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddCookie(options =>
+        {
+            options.LoginPath = "/Auth/Login";
+            options.AccessDeniedPath = "/Auth/AccessDenied";
+            options.ExpireTimeSpan = TimeSpan.FromDays(7);
+            options.SlidingExpiration = true;
+        });
 
-// Register Repositories
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
-builder.Services.AddScoped<ITagRepository, TagRepository>();
-builder.Services.AddScoped<ICommentRepository, CommentRepository>();
-builder.Services.AddScoped<IRoleRepository, RoleRepository>();
 
-// Register Services
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IArticleService, ArticleService>();
-builder.Services.AddScoped<ITagService, TagService>();
-builder.Services.AddScoped<ICommentService, CommentService>();
-builder.Services.AddScoped<IRoleService, RoleService>();
+    builder.Services.AddDbContext<ApplicationDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-var app = builder.Build();
+    // Регистрация сервисов
+    builder.Services.AddControllersWithViews();
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
+    
+    builder.Services.AddScoped<IUserService, UserService>();
+    builder.Services.AddScoped<IRoleService, RoleService>();
+    builder.Services.AddScoped<IArticleService, ArticleService>();
+    builder.Services.AddScoped<ITagService, TagService>();
+    builder.Services.AddScoped<ILoggerService, LoggerService>();
+
+    
+    builder.Services.AddScoped<IUserRepository, UserRepository>();
+    builder.Services.AddScoped<IRoleRepository, RoleRepository>();
+    builder.Services.AddScoped<IArticleRepository, ArticleRepository>();
+    builder.Services.AddScoped<ITagRepository, TagRepository>();
+
+    var app = builder.Build();
+
+    using (var scope = app.Services.CreateScope())
     {
-        SeedData.Initialize(services);
-        Console.WriteLine("Database seeded successfully.");
+        var services = scope.ServiceProvider;
+
+        try
+        {
+            var context = services.GetRequiredService<ApplicationDbContext>();
+
+            
+            context.Database.Migrate();
+
+            
+            MyBlog.Infrastructure.Data.SeedData.Initialize(services);
+
+            Console.WriteLine("База данных инициализирована с тестовыми данными!");
+        }
+        catch (Exception ex)
+        {
+            var logger = services.GetRequiredService<ILoggerService>();
+            await logger.LogErrorAsync("Ошибка при инициализации базы данных", ex);
+        }
     }
-    catch (Exception ex)
+
+
+    if (!app.Environment.IsDevelopment())
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred seeding the DB.");
+        app.UseExceptionHandler("/Home/Error");
+        app.UseHsts();
     }
+
+    app.UseHttpsRedirection();
+    app.UseStaticFiles();
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.MapControllerRoute(
+        name: "default",
+        pattern: "{controller=Home}/{action=Index}/{id?}");
+
+    app.Run();
 }
-
-// Configure the HTTP request pipeline.
-if (!app.Environment.IsDevelopment())
+catch (Exception ex)
 {
-    app.UseExceptionHandler("/Error");
-    app.UseStatusCodePagesWithReExecute("/Error/{0}");
-    app.UseHsts();
+    LogManager.GetCurrentClassLogger().Error(ex, "Stopped program because of exception");
+    throw;
 }
-else
+finally
 {
-    app.UseDeveloperExceptionPage();
+    LogManager.Shutdown();
 }
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-
-app.UseRouting();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.Use(async (context, next) =>
-{
-    await next();
-    if (context.Response.StatusCode == 404 && !context.Response.HasStarted)
-    {
-        context.Request.Path = "/Error/404";
-        await next();
-    }
-});
-
-app.Run();

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using MyBlog.Core.Interfaces;
 using System.Diagnostics;
 
 namespace MyBlog.Web.Controllers
@@ -8,38 +9,49 @@ namespace MyBlog.Web.Controllers
     [AllowAnonymous]
     public class ErrorController : Controller
     {
+        private readonly ILoggerService _loggerService;
+
+        public ErrorController(ILoggerService loggerService)
+        {
+            _loggerService = loggerService;
+        }
+
         [Route("Error/{statusCode}")]
-        public IActionResult HttpStatusCodeHandler(int statusCode)
+        public async Task<IActionResult> HttpStatusCodeHandler(int statusCode)
         {
             var statusCodeResult = HttpContext.Features.Get<IStatusCodeReExecuteFeature>();
+
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
             switch (statusCode)
             {
                 case 404:
-                    ViewBag.ErrorMessage = "Запрашиваемая страница не найдена";
-                    ViewBag.OriginalPath = statusCodeResult?.OriginalPath;
-                    ViewBag.OriginalQueryString = statusCodeResult?.OriginalQueryString;
+                    await _loggerService.LogInfoAsync($"404 Not Found - Path: {statusCodeResult?.OriginalPath}",
+                        userId != null ? int.Parse(userId) : null);
                     return View("NotFound");
                 case 403:
-                    ViewBag.ErrorMessage = "Доступ к запрашиваемому ресурсу запрещен";
+                    await _loggerService.LogInfoAsync($"403 Forbidden - Path: {statusCodeResult?.OriginalPath}",
+                        userId != null ? int.Parse(userId) : null);
                     return View("AccessDenied");
                 default:
-                    ViewBag.ErrorMessage = $"Произошла ошибка {statusCode}";
+                    await _loggerService.LogInfoAsync($"{statusCode} Error - Path: {statusCodeResult?.OriginalPath}",
+                        userId != null ? int.Parse(userId) : null);
                     return View("Error");
             }
         }
 
         [Route("Error")]
-        public IActionResult Error()
+        public async Task<IActionResult> Error()
         {
             var exceptionHandlerPathFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            ViewBag.ErrorMessage = exceptionHandlerPathFeature?.Error.Message ?? "Произошла непредвиденная ошибка";
-            ViewBag.Path = exceptionHandlerPathFeature?.Path;
-            ViewBag.StackTrace = exceptionHandlerPathFeature?.Error.StackTrace;
-
-            // Логирование ошибки (в реальном приложении)
-            // _logger.LogError(exceptionHandlerPathFeature.Error, "Произошла ошибка в приложении");
+            if (exceptionHandlerPathFeature?.Error != null)
+            {
+                await _loggerService.LogErrorAsync("Unhandled exception in application",
+                    exceptionHandlerPathFeature.Error,
+                    userId != null ? int.Parse(userId) : null);
+            }
 
             return View("Error");
         }

@@ -18,6 +18,18 @@ namespace MyBlog.Infrastructure.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes()
+                .Where(e => e.ClrType.IsSubclassOf(typeof(BaseEntity))))
+            {
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property(nameof(BaseEntity.CreatedAt))
+                    .HasDefaultValueSql("GETUTCDATE()");
+
+                modelBuilder.Entity(entityType.ClrType)
+                    .Property(nameof(BaseEntity.UpdatedAt))
+                    .HasDefaultValueSql("GETUTCDATE()");
+            }
+
             // User -> Role (many-to-many)
             modelBuilder.Entity<User>()
                 .HasMany(u => u.Roles)

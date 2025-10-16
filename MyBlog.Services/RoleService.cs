@@ -113,7 +113,7 @@ namespace MyBlog.Services
             var user = await _context.Users.Include(u => u.Roles).FirstOrDefaultAsync(u => u.Id == userId);
             var role = user?.Roles.FirstOrDefault(r => r.Id == roleId);
 
-            if (role != null)
+            if (user != null && role != null)
             {
                 user.Roles.Remove(role);
                 await _context.SaveChangesAsync();

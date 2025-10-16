@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MyBlog.Core.Interfaces;
 using MyBlog.Core.Models;
@@ -12,13 +14,57 @@ namespace MyBlog.Web.Controllers
         private readonly IArticleService _articleService;
         private readonly IUserService _userService;
         private readonly ITagService _tagService;
+        private readonly ILoggerService _loggerService;
 
-        public ArticlesController(IArticleService articleService, IUserService userService, ITagService tagService)
+        public ArticlesController(IArticleService articleService, IUserService userService, ITagService tagService, ILoggerService loggerService)
         {
             _articleService = articleService;
             _userService = userService;
             _tagService = tagService;
+            _loggerService = loggerService;
         }
+
+        [HttpPost, ActionName("Delete")]
+        [Authorize]
+        [CheckOwner("article")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                {
+                    await _loggerService.LogErrorAsync("Error deleting article - user not authenticated");
+                    return RedirectToAction("Login", "Auth");
+                }
+
+                var user = await _userService.GetUserByIdAsync(userId);
+                var article = await _articleService.GetArticleByIdAsync(id);
+
+                await _articleService.DeleteArticleAsync(id);
+
+                // Логируем удаление статьи
+                await _loggerService.LogUserActionAsync("ARTICLE_DELETE",
+                    $"Article deleted. ID: {id}, Title: {article.Title}",
+                    userId, $"{user.FirstName} {user.LastName}");
+
+                TempData["Success"] = "Статья успешно удалена!";
+                return RedirectToAction(nameof(Index));
+            }
+            catch (KeyNotFoundException ex)
+            {
+                await _loggerService.LogErrorAsync($"Error deleting article - article with ID {id} not found", ex);
+                return NotFound();
+            }
+            catch (Exception ex)
+            {
+                await _loggerService.LogErrorAsync("Error deleting article", ex);
+                TempData["Error"] = "Произошла ошибка при удалении статьи";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+        
 
         // GET: Articles
         [AllowAnonymous]
@@ -62,7 +108,14 @@ namespace MyBlog.Web.Controllers
             {
                 try
                 {
-                    var userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    {
+                        await _loggerService.LogErrorAsync("Error creating article - user not authenticated");
+                        return RedirectToAction("Login", "Auth");
+                    }
+
+                    var user = await _userService.GetUserByIdAsync(userId);
 
                     // Преобразуем строку тегов в List<string>
                     var tagList = tags?.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -70,12 +123,18 @@ namespace MyBlog.Web.Controllers
                                       .Where(t => !string.IsNullOrWhiteSpace(t))
                                       .ToList() ?? new List<string>();
 
-                    await _articleService.CreateArticleAsync(title, summary, content, userId, tagList);
+                    var article = await _articleService.CreateArticleAsync(title, summary, content, userId, tagList);
+
+                    await _loggerService.LogUserActionAsync("ARTICLE_CREATE",
+                    $"Article created. ID: {article.Id}, Title: {title}",
+                    userId, $"{user.FirstName} {user.LastName}");
+
                     TempData["Success"] = "Статья успешно создана!";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
+                    await _loggerService.LogErrorAsync("Error creating article", ex);
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
@@ -118,12 +177,28 @@ namespace MyBlog.Web.Controllers
             {
                 try
                 {
+                    var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+                    if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+                    {
+                        await _loggerService.LogErrorAsync("Error editing article - user not authenticated");
+                        return RedirectToAction("Login", "Auth");
+                    }
+
+                    var user = await _userService.GetUserByIdAsync(userId);
+
                     await _articleService.UpdateArticleAsync(article);
-                    TempData["Success"] = "Статья успешно обновлена!"; // Добавил TempData
+
+                    // Логируем редактирование статьи
+                    await _loggerService.LogUserActionAsync("ARTICLE_EDIT",
+                        $"Article edited. ID: {article.Id}, Title: {article.Title}",
+                        userId, $"{user.FirstName} {user.LastName}");
+
+                    TempData["Success"] = "Статья успешно обновлена!";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (Exception ex)
                 {
+                    await _loggerService.LogErrorAsync("Error editing article", ex);
                     ModelState.AddModelError(string.Empty, ex.Message);
                 }
             }
@@ -148,25 +223,6 @@ namespace MyBlog.Web.Controllers
             {
                 return NotFound();
             }
-        }
-
-        // POST: Articles/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [Authorize]
-        [CheckOwner("article")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            try
-            {
-                await _articleService.DeleteArticleAsync(id);
-                TempData["Success"] = "Статья успешно удалена!"; // Добавил TempData
-                return RedirectToAction(nameof(Index));
-            }
-            catch (KeyNotFoundException)
-            {
-                return NotFound();
-            }
-        }
+        }        
     }
 }

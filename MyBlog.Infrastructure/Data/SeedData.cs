@@ -37,7 +37,7 @@ namespace MyBlog.Infrastructure.Data
                         Email = "admin@blog.com",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
                         FirstName = "Администратор",
-                        LastName = "Системы",
+                        LastName = "Системы",                        
                         Roles = new List<Role> { adminRole }
                     },
                     new User
@@ -53,7 +53,7 @@ namespace MyBlog.Infrastructure.Data
                         Email = "user@blog.com",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("user123"),
                         FirstName = "Обычный",
-                        LastName = "Пользователь",
+                        LastName = "Пользователь",                        
                         Roles = new List<Role> { userRole }
                     }
                 };
