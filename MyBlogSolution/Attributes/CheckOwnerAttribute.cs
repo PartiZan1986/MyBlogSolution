@@ -17,75 +17,94 @@ namespace MyBlog.Web.Attributes
         public override async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
         {
             var user = context.HttpContext.User;
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var currentUserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            if (string.IsNullOrEmpty(userId))
+            // Проверка аутентификации
+            if (string.IsNullOrEmpty(currentUserId))
             {
                 context.Result = new RedirectToActionResult("Login", "Auth", null);
                 return;
             }
 
-            // Админы и модераторы имеют доступ ко всему
-            if (user.HasClaim(ClaimTypes.Role, "Admin") || user.HasClaim(ClaimTypes.Role, "Moderator"))
+            // ✅ Админы и модераторы имеют доступ ко всему - пропускаем проверку
+            if (user.IsInRole("Admin") || user.IsInRole("Moderator"))
             {
                 await next();
                 return;
             }
 
-            // Проверяем владельца для разных типов сущностей
-            switch (_entityType)
+            // ✅ Проверяем владельца для разных типов сущностей
+            var hasAccess = _entityType switch
             {
-                case "article":
-                    await CheckArticleOwner(context, userId);
-                    break;
-                case "comment":
-                    await CheckCommentOwner(context, userId);
-                    break;
-                case "user":
-                    await CheckUserOwner(context, userId);
-                    break;
+                "article" => await CheckArticleOwnerAsync(context, currentUserId),
+                "comment" => await CheckCommentOwnerAsync(context, currentUserId),
+                "user" => await CheckUserOwnerAsync(context, currentUserId),
+                _ => true
+            };
+
+            if (!hasAccess)
+            {
+                context.Result = new RedirectToActionResult("AccessDenied", "Auth", null);
+                return;
             }
 
             await next();
         }
 
-        private async Task CheckArticleOwner(ActionExecutingContext context, string currentUserId)
+        private async Task<bool> CheckArticleOwnerAsync(ActionExecutingContext context, string currentUserId)
         {
-            if (context.ActionArguments.TryGetValue("id", out var idObj) && int.TryParse(idObj?.ToString(), out int articleId))
+            if (!context.ActionArguments.TryGetValue("id", out var idObj) ||
+                !int.TryParse(idObj?.ToString(), out int articleId))
             {
-                var articleService = context.HttpContext.RequestServices.GetService<IArticleService>();
+                return false;
+            }
+
+            var articleService = context.HttpContext.RequestServices.GetService<IArticleService>();
+            if (articleService == null) return false;
+
+            try
+            {
                 var article = await articleService.GetArticleByIdAsync(articleId);
-
-                if (article != null && article.AuthorId.ToString() != currentUserId)
-                {
-                    context.Result = new RedirectToActionResult("AccessDenied", "Auth", null);
-                }
+                return article != null && article.AuthorId.ToString() == currentUserId;
+            }
+            catch
+            {
+                return false;
             }
         }
 
-        private async Task CheckCommentOwner(ActionExecutingContext context, string currentUserId)
+        private async Task<bool> CheckCommentOwnerAsync(ActionExecutingContext context, string currentUserId)
         {
-            if (context.ActionArguments.TryGetValue("id", out var idObj) && int.TryParse(idObj?.ToString(), out int commentId))
+            if (!context.ActionArguments.TryGetValue("id", out var idObj) ||
+                !int.TryParse(idObj?.ToString(), out int commentId))
             {
-                var commentService = context.HttpContext.RequestServices.GetService<ICommentService>();
+                return false;
+            }
+
+            var commentService = context.HttpContext.RequestServices.GetService<ICommentService>();
+            if (commentService == null) return false;
+
+            try
+            {
                 var comment = await commentService.GetCommentByIdAsync(commentId);
-
-                if (comment != null && comment.AuthorId.ToString() != currentUserId)
-                {
-                    context.Result = new RedirectToActionResult("AccessDenied", "Auth", null);
-                }
+                return comment != null && comment.AuthorId.ToString() == currentUserId;
+            }
+            catch
+            {
+                return false;
             }
         }
 
-        private async Task CheckUserOwner(ActionExecutingContext context, string currentUserId)
+        private Task<bool> CheckUserOwnerAsync(ActionExecutingContext context, string currentUserId)
         {
-            if (context.ActionArguments.TryGetValue("id", out var idObj) && int.TryParse(idObj?.ToString(), out int userId))
+            if (!context.ActionArguments.TryGetValue("id", out var idObj) ||
+                !int.TryParse(idObj?.ToString(), out int userId))
             {
-                if (userId.ToString() != currentUserId)
-                {
-                    context.Result = new RedirectToActionResult("AccessDenied", "Auth", null);
-                }
+                return Task.FromResult(false);
             }
+
+            bool isOwner = userId.ToString() == currentUserId;
+            return Task.FromResult(isOwner);
         }
     }
 }
